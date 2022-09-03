@@ -267,6 +267,7 @@ int main()
 
 #else if
 
+
 /*
  * Hash Table with Linear Probing
  * 解决冲突方法为 线性探测法 的 hash表
@@ -280,41 +281,44 @@ int main()
  *      3. erase
  * Private Interface:
  *      1. expand (when loadFactor > 0.75)
+ *
+ *      注意把 空位分成 STATE_UNUSED和STATE_DEL两种状态
+ *          防止在find和count和erase时达到O(n)
+ *          根据STATE_UNUSED可以提前判定之后的hash桶中有妹有key
  */
 
-#include <iostream>
+#include<iostream>
+#include<math.h>
+
 using namespace std;
 
-// 桶的状态
-enum State
-{
-    STATE_UNUSE, // 从未使用过的桶
-    STATE_USING, // 正在使用的桶
-    STATE_DEL,   // 元素被删除了的桶
+//  状态
+enum State{
+    STATE_UNUSED,   //  从没被用过
+    STATE_USING,    //  正在被使用
+    STATE_DEL       //  已经被删除
 };
 
-// 桶的类型
-struct Bucket
-{
-    Bucket(int k = 0, State s = STATE_UNUSE)
-            : key(k)
-            , st(s)
-    {}
-
-    int key;      // 存储的数据
-    State st;  // 桶的当前状态
+//  hash桶
+struct Bucket{
+    Bucket(int x=0,State s=STATE_UNUSED)
+            :key(x),st(s){}
+    int key;
+    State st;
 };
 
-// 线性探测哈希表类型
-class HashTable
-{
+
+
+class HashTable{
 public:
-    HashTable(int sz = primes_[0], double loadFactor = 0.75)
-            : useBucketNum_(0)
-            , loadFactor_(loadFactor)
-            , primeIdx_(0)
+    HashTable(int sz=0,double lf=0.75)
+            : table_(nullptr),
+              tableSize_(sz),
+              bucketNum_(0),
+              loadFactor_(lf),
+              primeIdx_(0)
     {
-    //  确定大小 tableSize_
+        //  确定大小 tableSize_
         for(primeIdx_ =0;primeIdx_ < PRIME_SIZE;++primeIdx_)
         {
             int &i = primeIdx_;
@@ -328,156 +332,206 @@ public:
         table_ = new Bucket[tableSize_];
     }
 
-    ~HashTable()
-    {
-        delete[]table_;
-        table_ = nullptr;
-    }
-
-public:
-    // 插入元素
     bool insert(int key)
     {
-        // 考虑扩容
-        double factor = useBucketNum_*1.0 / tableSize_;
-        cout << "loadFactor:" << factor << endl;
-        if (factor > loadFactor_)
-        {
-            // 哈希表开始扩容
+        //  cmp loadFactor to expand
+        double load_factor = 1.0*bucketNum_ / tableSize_;
+        cout<<"key = "<<key<<" bucketNum_ = "<<bucketNum_<<" tableSize_ = "<<tableSize_<<" loadFactor = "<<load_factor<<endl;
+
+        if(load_factor>loadFactor_){
             expand();
         }
 
-        int idx = key % tableSize_;
-
-        int i = idx;
-        //  因为是multiset，所以不管之前存不存在，都可以放
-        do
-        {
-            if (table_[i].st != STATE_USING)
-            {
-                table_[i].st = STATE_USING;
-                table_[i].key = key;
-                ++useBucketNum_;
-                return true; // O(1)
+        //  find the first
+        int idx = (key%tableSize_ + tableSize_)%tableSize_;
+        int t = idx;
+        //  可以放多个同一元素
+        //  最多轮一圈 当然不可能走到这里 never reach t == idx 因为loadFactor < 0.75 所以必定会有STATE_UNUSED
+        do {
+            //  找到第一个不是正在被使用的
+            if(table_[idx].st == STATE_UNUSED || table_[idx].st == STATE_DEL){
+                table_[idx].st = STATE_USING;
+                table_[idx].key = key;
+                ++bucketNum_;
+                return true;            //  O(1)
             }
-            i = (i + 1) % tableSize_;
-        } while (i != idx); // O(n)
+            idx = (idx+1)%tableSize_;
+        }while(t!=idx);                 //  O(n)
 
+        cout<<"never reach! insert internal error!"<<endl;
         return false;
     }
 
-    // 删除元素
-        //  全部key都要删除
-    bool erase(int key)
-    {
-        int idx = key % tableSize_;
-
-        int i = idx;
-        do
-        {
-            if (table_[i].st == STATE_USING && table_[i].key == key)
-            {
-                table_[i].st = STATE_DEL;
-                useBucketNum_--;
-            }
-            i = (i + 1) % tableSize_;
-        } while (table_[i].st != STATE_UNUSE && i != idx);
-
-        return true;
-    }
-
-    // 查询  count(key)
     bool find(int key)
     {
-        int idx = key % tableSize_;
-
-        int i = idx;
-        do
-        {
-            if (table_[i].st == STATE_USING && table_[i].key == key)
+        int idx = (key%tableSize_ + tableSize_)%tableSize_;
+        int t = idx;
+        do{
+            if(table_[idx].st == STATE_USING && table_[idx].key == key)
             {
                 return true;
             }
-            i = (i + 1) % tableSize_;
-        } while (table_[i].st != STATE_UNUSE && i != idx);
+            idx = (idx+1)%tableSize_;
+        }while(t!=idx && table_[idx].st!=STATE_UNUSED);
 
         return false;
+    }
+
+    int count(int key)
+    {
+        int cnt = 0;
+        int idx = (key%tableSize_ + tableSize_)%tableSize_;
+        int t = idx;
+        do{
+            if(table_[idx].st == STATE_USING && table_[idx].key == key)
+                ++cnt;
+            idx = (idx+1)%tableSize_;
+        }while(t!=idx && table_[idx].st!=STATE_UNUSED);
+        //   如果之前又插入了一个key元素，那么，这个key元素一定会在占据这个STATE_UNUSED桶，而此时这个桶仍然是STATE_UNUSED，证明从该位置往后没有key
+        //   究其原因，还是因为key寻址时的路线，在这些操作 :insert , count , erase 时是一致的。
+        //   这也是为什么要把STATE_UNUSED 和 STATE_DEL 分开
+        //   如果有一个空位是STATE_UNUSED，那么不能认为该位置之后的桶中都没有key
+        //   因为这个DEL可能是后删除的，是在该key之前插入，并在已经插入完一堆该key之后删除。
+        return cnt;
+    }
+
+    bool erase(int key)
+    {
+        int idx = (key%tableSize_ + tableSize_)%tableSize_;
+        int t = idx;
+        do{
+            if(table_[idx].st == STATE_USING && table_[idx].key == key)
+            {
+                table_[idx].st = STATE_DEL;
+                table_[idx].key = -1;           //  useless
+                --bucketNum_;
+            }
+            idx = (idx+1)%tableSize_;
+        }while(t!=idx && table_[idx].st!=STATE_UNUSED);
+        //   如果之前又插入了一个key元素，那么，这个key元素一定会在占据这个STATE_UNUSED桶，而此时这个桶仍然是STATE_UNUSED，证明从该位置往后没有key
+        //   究其原因，还是因为key寻址时的路线，在这些操作 :insert , count , erase 时是一致的。
+        //   这也是为什么要把STATE_UNUSED 和 STATE_DEL 分开
+        //   如果有一个空位是STATE_UNUSED，那么不能认为该位置之后的桶中都没有key
+        //   因为这个DEL可能是后删除的，是在该key之前插入，并在已经插入完一堆该key之后删除。
+        return true;
     }
 
     void show()
     {
-        for(int i=0;i<tableSize_;++i)
-        {
+        for(int i=0;i<tableSize_;++i){
             cout<<table_[i].key<<" ";
         }
         cout<<endl;
     }
 
+    ~HashTable()
+    {
+        delete []table_;
+        table_ = nullptr;
+    }
 private:
-    // 扩容操作
     void expand()
     {
-        ++primeIdx_;
-        if (primeIdx_ == PRIME_SIZE)
+        cout<<"expand"<<endl;
+        if(primeIdx_ == PRIME_SIZE-1)
         {
-            throw "HashTable is too large, can not expand anymore!";
+            throw "the hash table is too big! failed to expand!";
         }
 
-        Bucket* newTable = new Bucket[primes_[primeIdx_]];
-        for (int i = 0; i < tableSize_; i++)
+        int oldSz = tableSize_;
+        tableSize_ = primes_[++primeIdx_];
+        Bucket* oldTable = table_;
+        table_ = new Bucket[tableSize_];
+        for(int i=0;i<oldSz;++i)
         {
-            if (table_[i].st == STATE_USING) // 旧表有效的数据，重新哈希放到扩容后的新表
-            {
-                int idx = table_[i].key % primes_[primeIdx_];
+            //  对有效的hash桶的元素进行重新插入
+            if(oldTable[i].st != STATE_USING) continue;
+            int key = oldTable[i].key;
+            int idx = (key%tableSize_ + tableSize_)%tableSize_;
+            int t = idx;
 
-                int k = idx;
-                do
-                {
-                    if (newTable[k].st != STATE_USING)
-                    {
-                        newTable[k].st = STATE_USING;
-                        newTable[k].key = table_[i].key;
-                        break;
-                    }
-                    k = (k + 1) % primes_[primeIdx_];
-                } while (k != idx);
-            }
+            //  重新插入新的哈希表 注意别重新计算bucketNum_
+            do {
+                if(table_[idx].st == STATE_UNUSED){
+                    table_[idx].st = STATE_USING;
+                    table_[idx].key = key;
+                    break;
+                }
+                idx = (idx+1)%tableSize_;
+            }while(idx!=t);
+
         }
-
-        delete[]table_;
-        table_ = newTable;
-        tableSize_ = primes_[primeIdx_];
+        delete []oldTable;
     }
 
-private:
-    Bucket* table_;    // 指向动态开辟的哈希表
-    int tableSize_;    // 哈希表当前的长度
-    int useBucketNum_; // 已经使用的桶的个数
-    double loadFactor_;// 哈希表的装载因子
-
-    static const int PRIME_SIZE = 10; // 素数表的大小
-    static int primes_[PRIME_SIZE];   // 素数表
-    int primeIdx_; // 当前使用的素数下标
+    Bucket* table_;
+    int tableSize_;
+    int bucketNum_;
+    double loadFactor_ = 0.75;
+    static const int PRIME_SIZE = 10;
+    int primeIdx_;
+    static int primes_[PRIME_SIZE];
 };
+
 
 int HashTable::primes_[PRIME_SIZE] = { 3, 7, 23, 47, 97, 251, 443, 911, 1471, 42773 };
 
 int main()
 {
-    HashTable hash_table;
-    hash_table.insert(21);
-    hash_table.insert(32);
-    hash_table.insert(14);
-    hash_table.insert(15);
+    HashTable hashTable;
+    hashTable.insert(1);
+    hashTable.insert(2);
+    hashTable.insert(2);
+    hashTable.insert(4);
+    hashTable.insert(7);
 
-    hash_table.insert(22);
+    hashTable.show();
 
-    cout << hash_table.find(21) << endl;
-    hash_table.erase(21);
-    cout << hash_table.find(21) << endl;
+    hashTable.erase(1);
+    hashTable.erase(2);
+    hashTable.erase(3);
+    hashTable.show();
+    hashTable.insert(88);
+    hashTable.show();
 
-    hash_table.show();
+//    cout<<hashTable.find(4)<<endl;
+//    cout<<hashTable.find(-1)<<endl;
+//    cout<<hashTable.find(6)<<endl;
+//    cout<<hashTable.find(88)<<endl;
+//
+
+    hashTable.insert(3);
+    hashTable.insert(3);
+    hashTable.show();
+    hashTable.insert(3);
+    hashTable.insert(3);
+    hashTable.show();
+    cout<<hashTable.count(3)<<endl;
+
+    hashTable.erase(7);
+    cout<<hashTable.count(3)<<endl;
 }
 
+/*
+ * key = 1 bucketNum_ = 0 tableSize_ = 3 loadFactor = 0
+key = 2 bucketNum_ = 1 tableSize_ = 3 loadFactor = 0.333333
+key = 2 bucketNum_ = 2 tableSize_ = 3 loadFactor = 0.666667
+key = 4 bucketNum_ = 3 tableSize_ = 3 loadFactor = 1
+expand
+key = 7 bucketNum_ = 4 tableSize_ = 7 loadFactor = 0.571429
+7 1 2 2 4 0 0
+7 -1 -1 -1 4 0 0
+key = 88 bucketNum_ = 2 tableSize_ = 7 loadFactor = 0.285714
+7 -1 -1 -1 4 88 0
+key = 3 bucketNum_ = 3 tableSize_ = 7 loadFactor = 0.428571
+key = 3 bucketNum_ = 4 tableSize_ = 7 loadFactor = 0.571429
+7 -1 -1 3 4 88 3
+key = 3 bucketNum_ = 5 tableSize_ = 7 loadFactor = 0.714286
+key = 3 bucketNum_ = 6 tableSize_ = 7 loadFactor = 0.857143
+expand
+0 0 0 3 3 4 3 7 3 0 0 0 0 0 0 0 0 0 0 88 0 0 0
+4
+4
+ */
 
 #endif
