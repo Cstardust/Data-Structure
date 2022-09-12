@@ -16,7 +16,7 @@ using namespace std;
  */
 
 
-const int MAP_SIZE = 8;     //  如果是int的话，MAP_SIZE就是 sizeof int
+const int CHAR_SIZE = 8;     //  用来存储位bit的容器：char
 
 void print_bit(char x)
 {
@@ -29,9 +29,10 @@ void print_bit(char x)
 
 int main() {
 
+    //  MAX_NUMBER = 125 -> number of bits is 125
     vector<int> v{12,13,12,78,95,64,125,17,78};
     //  s
-    const int sz = 125/MAP_SIZE + 1;
+    const int sz = 125/CHAR_SIZE + 1;
     //  定义位图数组
     char *bitmap = new char[sz]();      //  ()值初始化
     shared_ptr<char> p(bitmap);
@@ -39,11 +40,11 @@ int main() {
 
     for(int i=0;i<v.size();++i)
     {
-        //  map_size一定时，一对idx和offset可以唯一对应一个数据x (x=map_size*idx+offset)
+        //  计算出第v[i]个bit的索引：idx + offset
         //  第几个坑位
-        unsigned int idx = v[i] / MAP_SIZE;
+        unsigned int idx = v[i] / CHAR_SIZE;
         //  坑位里的第几位
-        unsigned int offset = v[i] % MAP_SIZE;
+        unsigned int offset = v[i] % CHAR_SIZE;
 //        print_bit(bitmap[idx]);
         //  该数字是否出现过
         if((bitmap[idx] & (1 << offset)) == 0)      //  如果bitmap[idx]的offset位=0

@@ -65,22 +65,50 @@ private:
 
 
 
+class BlackList
+{
+public:
+    void add(const string &key)
+    {
+        bloomFilter_.insert(key);
+    }
+    bool query(const string &key)
+    {
+        return bloomFilter_.query(key);
+    }
+private:
+    BloomFilter bloomFilter_;
+};
+
+
 int main() {
 
-    BloomFilter bloomFilter;
-    cout<<"insert"<<endl;
-    bloomFilter.insert("https://oi-wiki.org/");
-    bloomFilter.insert("https://github.com/Cstardust/Data-Structure/blob/main/BitMap/bitmap.cpp");
-    bloomFilter.insert("https://www.mihoyo.com/");
-    bloomFilter.insert("https://www.tencent.com/zh-cn/index.html");
+    BlackList blackList;
+    blackList.add("https://oi-wiki.org/");
+    blackList.add("https://github.com/Cstardust/Data-Structure/blob/main/BitMap/bitmap.cpp");
+    blackList.add("https://www.mihoyo.com/");
+    blackList.add("https://www.tencent.com/zh-cn/index.html");
 
-    cout<<"query"<<endl;
+    cout<<blackList.query("https://oi-wiki.org/")<<endl;
+    cout<<blackList.query("https://github.com/Cstardust/Data-Structure/blob/main/BitMap/bitmap.cpp")<<endl;
+    cout<<blackList.query("https://www.mihoyo.com/")<<endl;
+    cout<<blackList.query("https://www.tencent.com/zh-cn/index.html")<<endl;
+    cout<<blackList.query("https://www.tencent.com/zh-cn/indexhtml")<<endl;
 
-    cout<<bloomFilter.query("https://oi-wiki.org/")<<endl;
-    cout<<bloomFilter.query("https://github.com/Cstardust/Data-Structure/blob/main/BitMap/bitmap.cpp")<<endl;
-    cout<<bloomFilter.query("https://www.mihoyo.com/")<<endl;
-    cout<<bloomFilter.query("https://www.tencent.com/zh-cn/index.html")<<endl;
-    cout<<bloomFilter.query("https://www.tencent.com/zh-cn/indexhtml")<<endl;
+//    BloomFilter bloomFilter;
+//    cout<<"insert"<<endl;
+//    bloomFilter.insert("https://oi-wiki.org/");
+//    bloomFilter.insert("https://github.com/Cstardust/Data-Structure/blob/main/BitMap/bitmap.cpp");
+//    bloomFilter.insert("https://www.mihoyo.com/");
+//    bloomFilter.insert("https://www.tencent.com/zh-cn/index.html");
+//
+//    cout<<"query"<<endl;
+//
+//    cout<<bloomFilter.query("https://oi-wiki.org/")<<endl;
+//    cout<<bloomFilter.query("https://github.com/Cstardust/Data-Structure/blob/main/BitMap/bitmap.cpp")<<endl;
+//    cout<<bloomFilter.query("https://www.mihoyo.com/")<<endl;
+//    cout<<bloomFilter.query("https://www.tencent.com/zh-cn/index.html")<<endl;
+//    cout<<bloomFilter.query("https://www.tencent.com/zh-cn/indexhtml")<<endl;
 
     return 0;
 }
