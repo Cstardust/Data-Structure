@@ -2,8 +2,23 @@
 // Created by dell on 2022-09-04.
 //
 
+//  
 
 /*
+ *
+ * 要求搜索快：故 应用key值本身作为位置
+ *      不过key范围过大，因此通过hash函数缩小范围
+ *              hash中心思想：将较大范围的数映射到一个我们指定的区间
+ *  Hash Table : 一个hash桶的集合。一个hash桶存储一个key的值。通过 挂链表 或者 开放寻址 来解决hash冲突问题。
+ *  BitMap     : 一个位的集合。一个bit存储一个key是否存在的属性。实际上它的hash函数 就是将每个数据都映射到了对应的一个bit，由于这个hash函数（数据x映射到第x位上）的特性，也就不会有hash冲突
+ *  BloomFilter : 是前两者的结合。一个bitMap + k个hash函数
+ *      BloomFilter 一个位的集合
+ *          先通过Hash Table中的hash函数，将一个key映射到BloomFilter(BitMap)中的一个位上。
+ *          这个行为重复k组
+ *          也即，用k个bit来表示一个key是否存在的属性
+ *      如何解决hash冲突？（如何保证不会有不同数映射到相同的kbits？）
+ *          就是通过**k**个hash函数,以及bitMap的长度（位的个数）
+ * 
  * Chained Hash Table
  *  解决寻址冲突：通过在hash桶上挂链表的方式
  *
