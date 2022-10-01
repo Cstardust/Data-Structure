@@ -158,6 +158,7 @@ public:
         assert(len!=-1);
         plainText_ = buf;
         //  分组
+            //  因为plainText_ > N 所以需要分组 保证每个分组一定小于N
         splitInToPlainPackets();
     }
 
@@ -231,9 +232,19 @@ public:
         cout<<"n :"<<n_<<endl;
         cout<<"e :"<<e_<<endl;
         cout<<"d :"<<d_<<endl;
-        cout<<"=================cipherText below============"<<endl;
+
+        cout<<"=================plainText below after group=============="<<endl;
+        for_each(plainPackets_.begin(), plainPackets_.end(), [](int x)
+                 { cout << x <<" " ; });
+        
+        cout<<"=================cipherText below after group============="<<endl;
         for_each(cipherPackets_.begin(), cipherPackets_.end(), [](int x)
-                 { cout << x ; });
+                 { cout << x <<" " ; });
+        cout << endl;
+
+        cout<<"=================decryptText below after group============="<<endl;
+        for_each(decryptPackets_.begin(), decryptPackets_.end(), [](int x)
+                 { cout << x <<" " ; });
         cout << endl;
 
         cout<<"=================decryptText below============"<<endl;
@@ -333,6 +344,8 @@ private:
             ++i;
     }
 
+    //  每个分组的值m 一定要小于n = 40870433
+    //  不然RSA失效
     void splitInToPlainPackets()
     {
         int idx = 0;
@@ -408,6 +421,18 @@ private:
     unordered_map<int, char> inverseTable_;
     bool padding_; //  明文是否填充 现假定用80填充
     char buf[4096] = {0};
+
+
+    //  分组方法：一个明文组 加密之后 放入 一个密文组 。讲密文组vector交给解密方，解密方进行解密
+    //  为什么要分组 ？ 因为明文m的大小不可以大于n。要分组到每个分组的m都小于<n
+    //  为什么m不可以大于n?
+        //  加密公式： c = m ^ e mod n
+        //  解密公式： m = c ^ d mod n
+        //  如果m>n的话 那么 无论怎么加密解密 
+        //  解密的时候需要modn 
+        //  最后得到的一定是一个比n小的数m' . 而已知m>n ，因此 得到的m'一定不是m！！故m不可以>n
+        //  此时得到的数 是一个和 m mod n之后同余的数。
+        //  那么 我们可以用m'不断+n 最后会在某一刻得到m
 };
 
 
