@@ -7,9 +7,20 @@
 #include <fcntl.h>
 #include<unistd.h>
 #include<cassert>
+#include<random>
 
 using namespace std;
 using ULL = unsigned long long;
+
+//  均匀分布 利用/dev/random 硬件产生真随机数
+int getUniformDistributionInt(int minNum,int maxNum)
+{
+    static random_device seed;                                 // 硬件生成随机数种子
+    ranlux48 engine(seed());                                // 利用种子生成随机数引擎
+    uniform_int_distribution<int> distrib(minNum, maxNum);  //  设置随机数范围，并为均匀分布
+    return distrib(engine);                                 //  随机数
+}
+
 
 int64_t gcd(int a, int b)
 {
@@ -236,7 +247,7 @@ public:
         cout<<"=================plainText below after group=============="<<endl;
         for_each(plainPackets_.begin(), plainPackets_.end(), [](int x)
                  { cout << x <<" " ; });
-        
+       cout<<endl; 
         cout<<"=================cipherText below after group============="<<endl;
         for_each(cipherPackets_.begin(), cipherPackets_.end(), [](int x)
                  { cout << x <<" " ; });
@@ -275,7 +286,10 @@ private:
     {
         int primes[2];
         int idx = 0;
-        int start = 1000 + rand() % 9000;
+        //  srand(time(nullptr))
+        // int start = 1000 + rand() % 9000;
+        int start = getUniformDistributionInt(1000,10000);
+        
         for (int i = start;; ++i)
         {
             if (idx == 2)
