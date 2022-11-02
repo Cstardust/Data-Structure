@@ -497,7 +497,7 @@ private:
                 cur->data = predecessor->data;
                 //  要删除的节点变成了原先的前驱节点. dfs删除前驱节点
                 //  转化成situation 1 , 2
-                cur->left = dfsRemove(cur->left,cur->data);
+                cur->left = dfsRemove(cur->left,predecessor->data);
                 return cur;
             }
             //  situation 1
