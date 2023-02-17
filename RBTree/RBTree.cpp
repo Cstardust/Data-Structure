@@ -314,6 +314,7 @@ private:
                     rightRotate(parent);
                     break;                  //  调整结束
                 }
+                //  可以看出 红黑树删除最多旋转三次。situation 4 -> 2 -> 1
             }
         }
         //  祖先节点为红色，变黑即可。(针对情况3的一种处理）

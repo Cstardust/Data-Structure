@@ -122,21 +122,13 @@ private:
         else if(data <  r->data)
         {
             r->left = dfsRemove(r->left,data);
-            cout<<"!!"<<r->left<< " " << getHeight(r->right)<< " " <<getHeight(r->left)<<endl;
             //  左子树删除节点，可能造成右子树太高
             if(getHeight(r->right) - getHeight(r->left) > 1)
             {
                 //  有孩子的右子树太高
                 if(getHeight(r->right->right) >= getHeight(r->right->left))
                 {
-                    cout<<getHeight(r->right->right)<<" asasdasd "<<getHeight(r->right->left)<<endl;
-                    cout<<endl<<"+++++++++++++++++++++++++++++++++++++++++"<<endl;
-                    bfs();
-                    cout<<endl<<"+++++++++++++++++++++++++++++++++++++++++"<<endl;
                     r = leftRotate(r);
-                    cout<<endl<<"+++++++++++++++++++++++++++++++++++++++++"<<endl;
-                    bfs();
-                    cout<<endl<<"+++++++++++++++++++++++++++++++++++++++++"<<endl;
                 }
                 //  右孩子的左子树太高
                 else
